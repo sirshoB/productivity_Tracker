@@ -20,7 +20,7 @@ class AppUI:
     # def _build_ui(self):
     #     tk.Button(
     #         self.root,
-    #         text="Select 1st Excel",
+    #         text="Select 1st Excel",python
     #         command=self.start
     #     ).pack(paddy=10)
  
@@ -91,6 +91,7 @@ class AppUI:
             return
         self.second_df = pd.read_excel(excel_path,sheet_name="DATA")
         self.second_df.columns = self.second_df.columns.str.strip()
+        #print(self.second_df.column.)
         self.second_df["Emp Id"]=(self.second_df["Emp Id"].astype(str).str.replace(".0","",regex=False).str.strip())
         #print(self.second_df.columns)
         if self.input_df is None:
