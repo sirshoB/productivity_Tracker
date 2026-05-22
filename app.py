@@ -129,7 +129,10 @@ class AppUI:
         df["Total Productivity Hours"] = (
             df["Productivity Hours"] + df["Secondary Productivity Hours"] + df["Adjusted Productivity Hours"]
         )
-        #print(self.calculate_adjusted_prod(40177803))
+
+        for col in ["Hourly Target", "Productivity Hours", "Secondary Hourly Target",
+                    "Secondary Productivity Hours", "Adjusted Productivity Hours", "Total Productivity Hours"]:
+            df[col] = df[col].round(2)
  
         self.result_df = df[
             [
@@ -173,27 +176,36 @@ class AppUI:
         emp_id = str(row["Emp Id"]).replace(".0", "").strip()
         work_date = pd.to_datetime(row["Date"], errors="coerce").date()
         sequential_df["Emp Id"] = (sequential_df["Emp Id"].astype(str).str.replace(".0", "", regex=False).str.strip())
-        sequential_df["Date"] = pd.to_datetime(sequential_df["Date"],errors="coerce").dt.date
+        sequential_df["Date"] = pd.to_datetime(sequential_df["Date"], errors="coerce").dt.date
         sequential_df["Category1"] = (sequential_df["Category1"].astype(str).str.strip().str.lower())
         sequential_df["Reason (Ops Tracker)"] = (sequential_df["Reason (Ops Tracker)"].astype(str).str.strip().str.lower())
-        sequential_df["Minute"] = pd.to_numeric(sequential_df["Minute"],errors="coerce").fillna(0)
+
+        minute_col = sequential_df["Minute"]
+        if pd.api.types.is_timedelta64_dtype(minute_col):
+            sequential_df["Minute"] = minute_col.dt.total_seconds() / 60
+        elif pd.api.types.is_datetime64_any_dtype(minute_col):
+            sequential_df["Minute"] = minute_col.dt.hour * 60 + minute_col.dt.minute + minute_col.dt.second / 60
+        else:
+            sequential_df["Minute"] = pd.to_numeric(minute_col, errors="coerce").fillna(0)
+
         selected_categories = ["aux", "idle time"]
-        selected_reasons = ["coaching","quality","special projects","system down","team meeting","training","calibration"]
-        filtered_df = sequential_df[(sequential_df["Emp Id"] == emp_id) & (sequential_df["Date"] == work_date)
-                                    & (sequential_df["Category1"].isin(selected_categories))
-                                    & (sequential_df["Reason (Ops Tracker)"].isin(selected_reasons))]
+        selected_reasons = ["coaching", "quality", "special projects", "system down", "team meeting", "training", "calibration"]
+        filtered_df = sequential_df[
+            (sequential_df["Emp Id"] == emp_id) &
+            (sequential_df["Date"] == work_date) &
+            (sequential_df["Category1"].isin(selected_categories)) &
+            (sequential_df["Reason (Ops Tracker)"].isin(selected_reasons))
+        ]
         total_minutes = filtered_df["Minute"].sum()
-        print("EMP ID",emp_id)
-        print("Work date",work_date)
-        print(filtered_df[
-            "Emp Id",
-            "Date",
-            "Category1",
-            "Reason (Ops Tracker)",
-            "Minute"
-        ])
-        print("Total minutes :",total_minutes)
-        print("Total Hours:",total_minutes/60)
+        print(f"EMP ID: {emp_id} | Work date: {work_date} | Matched rows: {len(filtered_df)} | Total minutes: {total_minutes:.2f}")
+        if len(filtered_df) == 0:
+            emp_rows = sequential_df[sequential_df["Emp Id"] == emp_id]
+            if emp_rows.empty:
+                print("  Emp Id NOT FOUND in 2nd file at all.")
+            else:
+                print("  Sample dates in 2nd file:", emp_rows["Date"].unique()[:3].tolist())
+                print("  Sample Category1:", emp_rows["Category1"].unique()[:5].tolist())
+                print("  Sample Reason:", emp_rows["Reason (Ops Tracker)"].unique()[:5].tolist())
         return total_minutes / 60
     
  
